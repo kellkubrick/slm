@@ -21,6 +21,7 @@ class MaskMultiHeadAttention(nn.Module):
     Note that W_Q, W_K and W_V are stacked parameters for all heads (each of shape (d_model, d_k))
             assuming d_k = d_model // heads_num
     """
+
     def __init__(self, config):
         """Layers initialization."""
         super(MaskMultiHeadAttention, self).__init__()
@@ -38,7 +39,6 @@ class MaskMultiHeadAttention(nn.Module):
 
     def _init_weights(self):
         """Weights initialization."""
-        # TODO: Initialize weights with Xavier uniform initialization and bias with normal (std 1e-6) if it is not None
         torch.nn.init.xavier_uniform_(self.weights_q.weight)
         torch.nn.init.xavier_uniform_(self.weights_k.weight)
         torch.nn.init.xavier_uniform_(self.weights_v.weight)
@@ -62,19 +62,36 @@ class MaskMultiHeadAttention(nn.Module):
         Returns:
             Tensor of shape (batch size, M, d_model)
         """
-        # TODO: To implement forward pass, make the following steps:
-        #       1. Make queries, keys and values projections passing them through the corresponding Linear layers
-        #       2. Calculate the multi-head attention using the self.scaled_dot_product_attention block for the projected
-        #               queries, keys and values
-        #       3. Concatenate the attention outputs from all heads: reshape self.scaled_dot_product_attention block result
-        #               into (batch size, M, d_model) shape using .view() and .transpose().
-        #               Note that view() does not make a copy and may require contiguous in memory tensor
-        #               (use .contiguous() to fit tensor in memory properly after transpose)
-        #       4. Make final projection of the concatenated SDPA outputs using initialized for the final projection
-        #               Linear layer and return the result
         queries = self.weights_q(queries)
         keys = self.weights_k(keys)
         values = self.weights_v(values)
         bs = queries.size(0)
-        mha = self.scaled_dot_product_attention(queries, keys, values).transpose(1, 2).contiguous().view(bs, -1, self.config.d_model)
+        mha = self.scaled_dot_product_attention(queries, keys, values).transpose(1, 2).contiguous().view(bs, -1,
+                                                                                                         self.config.d_model)
         return self.weights_o(mha)
+
+
+class LayerNorm(nn.Module):
+    """A class for implementing Layer normalization."""
+
+    def __init__(self, config):
+        """Parameters initialization."""
+        super(LayerNorm, self).__init__()
+
+        self.gamma = nn.Parameter(torch.ones(config.d_model))
+        self.beta = nn.Parameter(torch.zeros(config.d_model))
+        self.eps = config.eps
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        """Forward pass for the Layer normalization block.
+
+        Args:
+            inputs: tensor of shape (batch_size, sequence length, d_model)
+
+        Returns:
+            Tensor of shape (batch size, sequence length, d_model)
+        """
+        mean, variance = inputs.mean(-1, keepdim=True), inputs.var(-1, keepdim=True, unbiased=False)
+        normalized_inputs = (inputs - mean) / torch.sqrt(variance + self.eps)
+        output = self.gamma * normalized_inputs + self.beta
+        return output
