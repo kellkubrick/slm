@@ -3,6 +3,7 @@ import pickle
 import re
 from collections import defaultdict
 from typing import Union
+from src.configs.data_config import data_cfg
 
 
 class BPETokenizer:
@@ -50,16 +51,19 @@ class BPETokenizer:
             A dictionary with keys represented as words (as tuples of characters) and values as word frequencies
         """
         word_counts = defaultdict(int)
-        with open(file_path, 'r', encoding='utf-8') as f:
-            for seq in f:
+
+        with open(file_path, 'r', encoding='utf-8') as file:
+            for line in file:
                 if self.lowercase:
-                    seq = seq.lower().strip()
+                    line = line.lower().strip()
                 else:
-                    seq = seq.strip()
-                seq = re.sub(r'\d+', '', seq)
-                for word in seq.split():
+                    line = line.strip()
+                line = re.sub(r'\d+', '', line)
+
+                for word in line.split():
                     word_counts[word] += 1
-            word_counts = dict([(tuple(x[:-1]) + (x[-1] + self.end_of_word,), y) for (x, y) in word_counts.items()])
+
+        word_counts = dict([(tuple(x[:-1]) + (x[-1] + self.end_of_word,), y) for (x, y) in word_counts.items()])
         return word_counts
 
     @staticmethod
@@ -73,12 +77,11 @@ class BPETokenizer:
         Returns:
             A sequence with tokens sorted in reverse order by length
         """
-        # TODO: Gather all unique tokens from word_counts in one set and return it. This set will then be used
-        #           to construct the vocabulary mappings
         tokens = set()
         for word in word_counts.keys():
             tokens.update(word)
-        return sorted(tokens, key=len, reverse=True)
+
+        return sorted(tokens, key=lambda x: len(x), reverse=True)
 
     @staticmethod
     def get_pair_statistics(word_counts: dict) -> dict:
@@ -91,8 +94,6 @@ class BPETokenizer:
         Returns:
             A dictionary with keys as a tuples of token pairs and values as these pairs frequency
         """
-
-        #
         pairs = defaultdict(int)
         for word, freq in word_counts.items():
             for i in range(len(word) - 1):
@@ -111,22 +112,17 @@ class BPETokenizer:
         Returns:
             A dictionary with keys represented as words (as merged tokens) and values as word frequencies
         """
-        # TODO: To implement merging step:
-        #       For each word:
-        #           1. Replace a pair of tokens from most_frequent_pair with one new merged token (if this pair is presented in a word)
-        #           2. Get new tuple of tokens representing the word and update new_vocab using this tuple as a key
-        #                   and word frequency from word_counts as a value
-        #       Return filled new_vocab
         new_vocab = {}
-        start_char, stop_char = most_frequent_pair
-        str_pair = "".join(most_frequent_pair)
-        pattern = re.compile(r'(?<!\S)' + re.escape(start_char + ' ' + stop_char) + r'(?!\S)')
+        first, second = most_frequent_pair
+        pair_str = ''.join(most_frequent_pair)
+        pattern = re.compile(r'(?<!\S)' + re.escape(first + ' ' + second) + r'(?!\S)')
 
         for word, freq in word_counts.items():
             new_word = ' '.join(word)
-            new_word = pattern.sub(str_pair, new_word)
+            new_word = pattern.sub(pair_str, new_word)
             new_word = tuple(new_word.split(' '))
             new_vocab[new_word] = freq
+
         return new_vocab
 
     def _update_vocabulary(self, word_counts: dict):
@@ -136,26 +132,25 @@ class BPETokenizer:
             word_counts: A dictionary with keys represented as words (as tuples of tokens)
                     and values as word frequencies
         """
-        # TODO: Updated vocabulary:
-        #        1) gather tokens with self.prepare_tokens() and add all new tokens to self.id2token
-        #           and self.token2id mappings. You can use iterating index as "id". Don't forget that vocabulary
-        #           mappings have been already initialized with some tokens, so new token ids must be shifted!
-        #        2) add all unique symbols (including end of word) that are present in the training set
-        tokens = BPETokenizer.prepare_tokens(word_counts)
-        shift = len(self.token2id)
+        tokens = self.prepare_tokens(word_counts)
+        shift = len(self.id2token)
+
+        # Add tokens from merged vocabulary
         for i, token in enumerate(tokens):
-            if token not in self.token2id:
-                self.token2id[token] = shift + i
-                self.id2token[shift + i] = token
+            self.id2token[i + shift] = token
+            self.token2id[token] = i + shift
 
-        uniq_symbols = set(''.join(tokens))
+        # Add all unique symbols
+        unique_symbols = set(''.join(tokens))
         shift, added = len(self.id2token), 0
-        for uniq_symbol in uniq_symbols:
-            if uniq_symbol not in self.token2id:
-                self.id2token[added + shift] = uniq_symbol
-                self.token2id[uniq_symbol] = added + shift
-                added += 1
+        for unique_symbol in unique_symbols:
+            if unique_symbol in self.token2id:
+                continue
+            self.id2token[added + shift] = unique_symbol
+            self.token2id[unique_symbol] = added + shift
+            added += 1
 
+        # Add end of word symbol
         self.id2token[added + shift] = self.end_of_word
         self.token2id[self.end_of_word] = added + shift
 
@@ -165,23 +160,16 @@ class BPETokenizer:
         Args:
             file_path: a path to the text file where each raw represents one training sequence (sentence)
         """
-        # TODO: Implement BPE training process:
-        #       1. Get all training corpus words using self.get_words() method
-        #       2. Make loop for a number of iterations equal to self.vocabulary_size and at each step:
-        #               a) get token pairs statistics with self.get_pair_statistics()
-        #               b) find the most frequently occurring token pair
-        #               c) make vocabulary merging step with self.merge() and found most frequent token pair
-        #       3. Update vocabulary with self._update_vocabulary and merged words counter
         words = self.get_words(file_path)
 
         for i in range(self.vocabulary_size):
-            pair_stat = self.get_pair_statistics(words)
-            most_freq = max(pair_stat, key=pair_stat.get)
-            words = self.merge(words, most_freq)
+            pairs = self.get_pair_statistics(words)
+            most_frequent_pair = max(pairs, key=pairs.get)
+            words = self.merge(words, most_frequent_pair)
 
         self._update_vocabulary(words)
 
-    def encode(self, text: str, tokenize=False) -> list[int]:
+    def encode(self, text: str, tokenize=False) -> Union[list[int], list[str]]:
         """Encodes text into token ids.
 
         Args:
@@ -190,35 +178,22 @@ class BPETokenizer:
         Returns:
             A list of tokens for input text
         """
-        # TODO: Encode text by replacing vocabulary tokens with ids using self.token2id mapping
-        #   1. Preprocess the text:
-        #       - Convert text to lowercase if self.lowercase is True.
-        #       - Split the text into words and add end_of_word token to each word.
-        #   2. Add special tokens:
-        #       - If self.use_bounds_tokens is True, add [SOS] at the beginning and [EOS] at the end of the word list.
-        #   3. Encode the text:
-        #       - Iterate through each word and its subwords.
-        #       - Replace vocabulary tokens with ids using self.token2id mapping.
-        #       - If the length of a subword is 1 and it is not found in self.token2id and self.use_unk_token is True, use the [UNK] token.
-        #   4. Return the list of encoded token ids.
-        tokens = []
-        encoded = []
-        if self.lowercase:
-            text = text.lower()
-        words = [word+self.end_of_word for word in text.strip().split()]
-
+        text = text.lower() if self.lowercase else text
+        words = [tuple(word) + (self.end_of_word,) for word in text.strip().split()]
         if self.use_bounds_tokens:
-            words = ['[SOS]'] + words + ['[EOS]']
+            words = [('[SOS]',)] + words + [('[EOS]',)]
+        encoded = []
+        tokens = []
 
         for word in words:
             i = 0
             while i < len(word):
                 unknown = True
                 for j in range(len(word), i, -1):
-                    subword = word[i:j]
+                    subword = ''.join(word[i:j])
                     if subword in self.token2id:
-                        tokens.append(subword)
                         encoded.append(self.token2id[subword])
+                        tokens.append(subword)
                         i = j - 1
                         unknown = False
                         break
@@ -226,12 +201,9 @@ class BPETokenizer:
                 if unknown and self.use_unk_token:
                     encoded.append(self.token2id['[UNK]'])
                     tokens.append('[UNK]')
-        print(tokens)
         if tokenize:
-            print(encoded)
-            return encoded
-
-        return tokens
+            return tokens
+        return encoded
 
     def decode(self, tokens: list[int], skip_special_tokens: bool = True) -> str:
         """Decodes token ids into text.
@@ -243,19 +215,16 @@ class BPETokenizer:
         Returns:
             Decoded text
         """
-        # TODO: Decode token ids by replacing them with text using self.id2token
-        #       Replace special tokens (including end_of_word) with a space and strip() the result
-        #               if skip_special_tokens is True
         decoded = ''.join([self.id2token[t] for t in tokens])
-        print(decoded)
         if self.use_bounds_tokens and not skip_special_tokens:
             decoded = decoded.replace('[SOS]', f'[SOS]{self.end_of_word}').replace('[EOS]', f'[EOS]{self.end_of_word}')
 
         if skip_special_tokens:
             decoded = re.sub('|'.join(map(re.escape, self.special_tokens)), ' ', decoded).strip()
-            print(decoded)
-
         return decoded.replace(self.end_of_word, ' ').strip()
+
+    def tokenize(self, text: str) -> list[str]:
+        return self.encode(text, tokenize=True)
 
     def save(self, path: str):
         """Saves vocabulary state."""
@@ -272,3 +241,11 @@ class BPETokenizer:
     def get_vocab_size(self) -> int:
         """Gets vocabulary size."""
         return len(self.id2token)
+
+
+if __name__ == "__main__":
+    tokenizer = BPETokenizer(["[SOS]", "[EOS]", "[PAD]", "[UNK]"], "/w", 30)
+    tokenizer.train("slm/src/data/test_dataset.txt")
+    tokenizer.encode(
+        "Love, hate, or feel meh about Harry Potter, it’s hard to argue that J.K. Rowling filled the books with intentional writing choices. From made up words to the meanings of names to the well-scripted first and last lines of each novel, Rowling wanted to the writing to match the intricate fantasy world she created for the now-iconic boy wizard. To examine a few of these choices, I’ll be taking a closer look at the first line of Harry Potter, as well as the last lines, from all of the Harry Potter novels.v",
+        tokenize=True)

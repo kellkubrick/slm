@@ -95,3 +95,45 @@ class LayerNorm(nn.Module):
         normalized_inputs = (inputs - mean) / torch.sqrt(variance + self.eps)
         output = self.gamma * normalized_inputs + self.beta
         return output
+
+
+class FeedForward(nn.Module):
+    """A class for implementing Feed Forward layer.
+
+    For each sample this block makes two linear transformations defined as follows:
+            FF(x) = max(0, x * W_1 + b_1) * W_2 + b_2,
+
+            where:
+                - x is an input tensor of shape (sequence length, d_model)
+                - W_1 and b_1 are trainable parameters of first Linear layer
+                        with output features num = d_ff and input features num = d_model
+                - W_2 and b_2 are trainable parameters of first Linear layer
+                        with output features num = d_model and input features num = d_ff
+    """
+
+    def __init__(self, config):
+        """Layers initialization."""
+        super(FeedForward, self).__init__()
+        self.weights_1 = nn.Linear(config.d_model, config.d_ff)
+        self.weights_2 = nn.Linear(config.d_ff, config.d_model)
+        self.relu = getattr(nn, config.activation)()
+
+        self._init_weights()
+
+    def _init_weights(self):
+        """Weights initialization."""
+        nn.init.xavier_uniform_(self.weights_1.weight)
+        nn.init.zeros_(self.weights_1.bias)
+        nn.init.xavier_uniform_(self.weights_2.weight)
+        nn.init.zeros_(self.weights_2.bias)
+
+    def forward(self, inputs: torch.Tensor) -> torch.Tensor:
+        """Forward pass for the Feed-Forward layer.
+
+        Args:
+            inputs: tensor of shape (batch size, sequence length, d_model).
+
+        Returns:
+            Tensor of shape (batch size, sequence length, d_model)
+        """
+        return self.weights_2(self.relu(self.weights_1(inputs)))

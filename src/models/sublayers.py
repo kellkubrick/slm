@@ -21,8 +21,6 @@ class ScaledDotProductAttention(nn.Module):
             wrt the one sample.
     """
 
-    # TODO: you may choose to not implement this class and use lighter stack
-    #   (SingleHeadAttention, MultiHeadAttentionSimple and ScaledDotProductAttentionSimple)
     def __init__(self, d_k: int = 64, heads_num: int = 8):
         """Layers initialization."""
         super(ScaledDotProductAttention, self).__init__()
@@ -45,26 +43,15 @@ class ScaledDotProductAttention(nn.Module):
         Returns:
             Tensor of shape (batch size, heads num, M, d_k) representing the values weighted with attention.
         """
-        # TODO: To implement SDPA forward pass for all heads, make the following steps:
-        #       1. Split inputs presentation into multiple heads by reshaping each of them (queries, keys, values)
-        #               to (batch size, heads num, <sequence length>, d_k) shape using .view() and .transpose()
-        #               torch.Tensor methods (<sequence length> is M for queries and N for keys and values)
-        #       2. Transpose keys tensor at last 2 dimensions and make queries and transposed keys tensors multiplication
-        #               using @ or torch.matmul to get attention scores
-        #       3. Scale the result by 1 / sqrt(self.d_k)
-        #       4. Apply mask if exists
-        #       5. Apply softmax to the scaled result to get weights for the values
-        #       6. Multiply attention weights with values using @ or torch.matmul and return the result
+
         bs = queries.size(dim=0)
 
-        nqueries = queries.view(bs, -1, self.heads_num, self.d_k).transpose(1,2)
-        nkeys = keys.view(bs, -1, self.heads_num, self.d_k).transpose(1,2)
-        nvalues = values.view(bs, -1, self.heads_num, self.d_k).transpose(1,2)
-        attention_scores = nqueries @ torch.transpose(nkeys, 2, 3) / ((self.d_k)**0.5)
+        nqueries = queries.view(bs, -1, self.heads_num, self.d_k).transpose(1, 2)
+        nkeys = keys.view(bs, -1, self.heads_num, self.d_k).transpose(1, 2)
+        nvalues = values.view(bs, -1, self.heads_num, self.d_k).transpose(1, 2)
+        attention_scores = nqueries @ torch.transpose(nkeys, 2, 3) / ((self.d_k) ** 0.5)
         if mask is not None:
             attention_scores = torch.mul(attention_scores, mask)
         weights = self.softmax(attention_scores)
         sdpa = weights @ nvalues
         return sdpa
-
-
