@@ -18,4 +18,3 @@ data_cfg.tiny_stories_dataset.preprocessing.special_tokens = ["[PAD]", "[SOS]", 
 data_cfg.tiny_stories_dataset.preprocessing.end_of_word = '</w>'
 data_cfg.tiny_stories_dataset.preprocessing.min_frequency = 2
 
-print(data_cfg)

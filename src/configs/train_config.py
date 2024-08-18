@@ -2,9 +2,9 @@ import os
 
 from easydict import EasyDict
 
-from configs.data_config import data_cfg
-from configs.model_config import model_cfg
-from utils.enums import InferenceType
+from data_config import data_cfg
+from model_config import model_cfg
+from src.utils.enums import InferenceType
 
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))
 
@@ -56,6 +56,3 @@ experiment_cfg.inference.type = InferenceType.temperature
 experiment_cfg.inference.temperature_value = 1
 experiment_cfg.inference.eps = 1e-9
 experiment_cfg.inference.stop_predict = 30  # Maximum number of inference steps (i.e. generated sequence length)
-
-experiment_cfg.model = model_cfg.vit
-experiment_cfg.data = data_cfg.cub
