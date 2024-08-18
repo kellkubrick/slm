@@ -1,10 +1,12 @@
 from tokenizer import BPETokenizer
 from src.models.embeddings import Embedding, PositionalEncoding
+from src.configs import general_config
 
 
 class Preprocessor:
     def __init__(self, config, data_path):
         self.config = config
+        self.path = data_path
 
         self.special_tokens = self.config.data_config.tiny_stories_dataset.preprocessing.special_tokens
         self.end_of_word = self.config.data_config.tiny_stories_dataset.preprocessing.end_of_word
@@ -30,10 +32,12 @@ class Preprocessor:
         pass
 
     def preprocess(self, text):
+        self.tokenizer.train(self.path)
         tokens = self.tokenizer.encode(text)
         embeddings = self.pe(self.embedder(tokens))
         return embeddings
 
 
 if __name__ == "__main__":
-    pass
+    preprocess = Preprocessor(general_config, r"C:\Users\Asus\PycharmProjects\slm\src\data\test_dataset.txt")
+    print(preprocess.preprocess("dsadasdasdasd"))
