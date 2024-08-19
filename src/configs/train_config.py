@@ -2,8 +2,8 @@ import os
 
 from easydict import EasyDict
 
-from data_config import data_cfg
-from model_config import model_cfg
+#from data_config import data_cfg
+#from model_config import model_cfg
 from src.utils.enums import InferenceType
 
 ROOT_DIR = os.path.dirname(os.path.dirname(__file__))

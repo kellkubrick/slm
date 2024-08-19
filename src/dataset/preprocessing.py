@@ -1,6 +1,6 @@
 from tokenizer import BPETokenizer
 from src.models.embeddings import Embedding, PositionalEncoding
-from src.configs import general_config
+from src.configs.general_config import general_config
 
 
 class Preprocessor:
@@ -8,7 +8,7 @@ class Preprocessor:
         self.config = config
         self.path = data_path
 
-        self.special_tokens = self.config.data_config.tiny_stories_dataset.preprocessing.special_tokens
+        self.special_tokens = config.data_config.tiny_stories_dataset.preprocessing.special_tokens
         self.end_of_word = self.config.data_config.tiny_stories_dataset.preprocessing.end_of_word
         self.vocab_size = self.config.data_config.tiny_stories_dataset.vocabulary_size
         self.d_model = self.config.model_config.d_model
@@ -39,5 +39,5 @@ class Preprocessor:
 
 
 if __name__ == "__main__":
-    preprocess = Preprocessor(general_config, r"C:\Users\Asus\PycharmProjects\slm\src\data\test_dataset.txt")
+    preprocess = Preprocessor(general_config, r"C:\Users\User\PycharmProjects\slm\src\data\test_dataset.txt")
     print(preprocess.preprocess("dsadasdasdasd"))
