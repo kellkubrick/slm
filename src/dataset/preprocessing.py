@@ -1,7 +1,7 @@
 from tokenizer import BPETokenizer
 from src.models.embeddings import Embedding, PositionalEncoding
 from src.configs.general_config import general_config
-
+import torch
 
 class Preprocessor:
     def __init__(self, config, data_path):
@@ -34,10 +34,10 @@ class Preprocessor:
     def preprocess(self, text):
         self.tokenizer.train(self.path)
         tokens = self.tokenizer.encode(text)
-        embeddings = self.pe(self.embedder(tokens))
+        embeddings = self.pe(self.embedder(torch.tensor([tokens])))
         return embeddings
 
 
 if __name__ == "__main__":
     preprocess = Preprocessor(general_config, r"C:\Users\User\PycharmProjects\slm\src\data\test_dataset.txt")
-    print(preprocess.preprocess("dsadasdasdasd"))
+    print(preprocess.preprocess("Love, hate, or feel meh about Harry Potter, it’s hard to argue that J.K. Rowling filled the books with intentional writing choices. From made up words to the meanings of names to the well-scripted first and last lines of each novel, Rowling wanted to the writing to match the intricate fantasy world she created for the now-iconic boy wizard. To examine a few of these choices, I’ll be taking a closer look at the first line of Harry Potter, as well as the last lines, from all of the Harry Potter novels"))

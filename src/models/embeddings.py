@@ -64,13 +64,13 @@ class PositionalEncoding(nn.Module):
     @staticmethod
     def get_positional_encoding(max_sequence_length: int, d_model: int) -> torch.Tensor:
         """Constructs PE matrix."""
-        pos = torch.arange(max_sequence_length, dtype=torch.float32).unsqueeze(1)
+        positions = torch.arange(max_sequence_length, dtype=torch.float32).unsqueeze(1)
         scaling_factor = torch.pow(torch.tensor(10000), torch.arange(0, d_model, 2) / d_model)
 
-        positional_encoding_matrix = torch.zeros([max_sequence_length, d_model])
-        positional_encoding_matrix[:, 0::2] = torch.sin(pos / scaling_factor)
-        positional_encoding_matrix[:, 1::2] = torch.cos(pos / scaling_factor)
-        return positional_encoding_matrix.unsqueeze(0)
+        positional_encoding = torch.zeros(max_sequence_length, d_model)
+        positional_encoding[:, 0::2] = torch.sin(positions / scaling_factor)
+        positional_encoding[:, 1::2] = torch.cos(positions / scaling_factor)
+        return positional_encoding.unsqueeze(0)
 
     def forward(self, inputs: torch.Tensor) -> torch.Tensor:
         """Forward pass for the Positional Encoding block.
@@ -81,5 +81,10 @@ class PositionalEncoding(nn.Module):
         Returns:
             Tensor of shape (batch size, sequence length, d_model) representing "positional encoded" inputs
         """
+        print(self.positional_encoding[:, :inputs.size(1)].size())
         return self.dropout(inputs + self.positional_encoding[:, :inputs.size(1)])
 
+if __name__ == "__main__":
+    embedder = Embedding(100, 512)(torch.tensor([[1, 2, 54, 24, 67]]))
+    pe = PositionalEncoding(1024, 512, 0.1)(embedder)
+    print(pe)

@@ -164,6 +164,7 @@ class BPETokenizer:
 
         for i in range(self.vocabulary_size):
             pairs = self.get_pair_statistics(words)
+            print(pairs)
             most_frequent_pair = max(pairs, key=pairs.get)
             words = self.merge(words, most_frequent_pair)
 

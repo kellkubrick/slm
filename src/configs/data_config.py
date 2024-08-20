@@ -7,7 +7,7 @@ data_cfg = EasyDict()
 data_cfg.tiny_stories_dataset = EasyDict()
 data_cfg.tiny_stories_dataset.name = 'TinyStoriesDataset'
 data_cfg.tiny_stories_dataset.path_to_data = 'src/data/dataset'
-data_cfg.tiny_stories_dataset.vocabulary_size = 30000
+data_cfg.tiny_stories_dataset.vocabulary_size = 200
 data_cfg.tiny_stories_dataset.sort = True
 
 data_cfg.tiny_stories_dataset.preprocessing = EasyDict()
